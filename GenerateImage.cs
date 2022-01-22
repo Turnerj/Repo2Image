@@ -38,13 +38,11 @@ namespace Repo2Image
 			string repoName
 		)
 		{
-			log.LogInformation("C# HTTP trigger function processed a request.");
-
 			try
 			{
 				var github = new GitHubClient(new ProductHeaderValue("Repo2Image"))
 				{
-					Credentials = new Credentials("")
+					Credentials = new Credentials(Environment.GetEnvironmentVariable("GitHubToken"))
 				};
 				var repo = await github.Repository.Get(owner, repoName);
 
@@ -70,7 +68,7 @@ namespace Repo2Image
 				}
 				catch (Exception ex)
 				{
-
+					log.LogInformation(ex, "Repository icon unavailable");
 				}
 
 				using var image = new Image<Rgba32>(420, 80);
@@ -151,12 +149,12 @@ namespace Repo2Image
 			}
 			catch (Exception ex)
 			{
-				return new BadRequestObjectResult(ex.Message);
-				//return new BadRequestObjectResult("Invalid owner/repo");
+				log.LogError(ex, "Unable to generate image");;
+				return new BadRequestObjectResult("Unable to generate image");
 			}
 		}
 
-		private string GetNumberString(int number)
+		private static string GetNumberString(int number)
 		{
 			if (number < 1000)
 			{
