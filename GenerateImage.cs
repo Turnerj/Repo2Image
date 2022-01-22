@@ -32,7 +32,7 @@ namespace Repo2Image
 
 		[FunctionName("GenerateImage")]
 		public async Task<IActionResult> Run(
-			[HttpTrigger(AuthorizationLevel.Anonymous, Route = "{owner}/{repoName}/image")] HttpRequest req,
+			[HttpTrigger(AuthorizationLevel.Anonymous, Route = "{owner}/{repoName}/image.png")] HttpRequest req,
 			ILogger log,
 			string owner,
 			string repoName
