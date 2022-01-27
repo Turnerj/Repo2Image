@@ -18,18 +18,22 @@ using Microsoft.Net.Http.Headers;
 using Microsoft.Extensions.Primitives;
 using System.Net.Http;
 using SixLabors.ImageSharp.ColorSpaces;
+using TurnerSoftware.Vibrancy;
+using System.Linq;
 
 namespace Repo2Image
 {
 	public class GenerateImage
 	{
 		private readonly HttpClient HttpClient;
+		private const int MaxIconWidth = 200;
+		private const int MaxIconHeight = 200;
 
 		public GenerateImage(HttpClient httpClient)
 		{
 			HttpClient = httpClient;
 		}
-
+		//TODO: Look at using Vibrancy
 		[FunctionName("GenerateImage")]
 		public async Task<IActionResult> Run(
 			[HttpTrigger(AuthorizationLevel.Anonymous, Route = "{owner}/{repoName}/image.png")] HttpRequest req,
@@ -58,13 +62,16 @@ namespace Repo2Image
 					.GetManifestResourceStream("Repo2Image.images.code-branch-solid.png");
 				using var forkImage = await Image.LoadAsync<Rgba32>(forkStream);
 
-				Image<Rgba32> iconImage = null;
+				Image<Rgb24> iconImage = null;
 				Rgb[] vibrantColours = null;
 				try
 				{
 					using var imageStream = await HttpClient.GetStreamAsync($"https://github.com/{repo.Owner.Login}/{repo.Name}/raw/main/images/icon.png");
-					iconImage = await Image.LoadAsync<Rgba32>(imageStream);
-					vibrantColours = iconImage.GetVibrantColours();
+					iconImage = await Image.LoadAsync<Rgb24>(imageStream);
+					if (iconImage.Width <= MaxIconWidth && iconImage.Height <= MaxIconHeight)
+					{
+						vibrantColours = iconImage.GetVibrantColours();
+					}
 				}
 				catch (Exception ex)
 				{

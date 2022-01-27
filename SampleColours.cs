@@ -32,9 +32,9 @@ namespace Repo2Image
 		{
 			try
 			{
-				Image<Rgba32> iconImage = null;
+				Image<Rgb24> iconImage = null;
 				using var imageStream = await HttpClient.GetStreamAsync($"https://github.com/{owner}/{repoName}/raw/main/images/icon.png");
-				iconImage = await Image.LoadAsync<Rgba32>(imageStream);
+				iconImage = await Image.LoadAsync<Rgb24>(imageStream);
 
 				var vibrantColours = iconImage.GetVibrantColours();
 				var gradient = new LinearGradientBrush(

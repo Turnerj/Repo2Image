@@ -7,11 +7,27 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Transforms;
 using System.Collections.Generic;
 using System.Linq;
+using TurnerSoftware.Vibrancy;
 
 namespace Repo2Image;
 
 internal static class ImageColourSampler
 {
+	private static readonly Palette Palette = new(new PaletteOptions(new SwatchDefinition[]
+	{
+		SwatchDefinition.Vibrant
+	}));
+
+	public static Rgb[] GetVibrantColours(this Image<Rgb24> image)
+	{
+		var swatches = Palette.GetSwatches(image);
+		return swatches[0].GetColors()
+			.Where(c => c.Hsv.S > 0.6f)
+			.OrderBy(c => c.Hsv.H)
+			.Select(c => c.Rgb)
+			.ToArray();
+	}
+
 	public static Rgb[] GetVibrantColours(this Image<Rgba32> image)
 	{
 		var localImage = image.Clone();
@@ -57,31 +73,20 @@ internal static class ImageColourSampler
 	{
 		var colourStops = new List<ColorStop>();
 
-		if (colours.Length > 2)
+		var stopDistance = 1f / (colours.Length - 1);
+		for (var i = 0; i < colours.Length; i++)
 		{
-			colourStops.Add(new ColorStop(0, GetColour(colours[0])));
-			colourStops.Add(new ColorStop(0.5f, GetColour(colours[colours.Length / 2])));
-			colourStops.Add(new ColorStop(1, GetColour(colours[^1])));
-		}
-		else if (colours.Length > 1)
-		{
-			colourStops.Add(new ColorStop(0, GetColour(colours[0])));
-			colourStops.Add(new ColorStop(1, GetColour(colours[^1])));
-		}
-		else
-		{
-			colourStops.Add(new ColorStop(0, GetColour(colours[0])));
+			var colour = colours[i];
+			colourStops.Add(new ColorStop(
+				stopDistance * i,
+				Color.FromRgb(
+					(byte)(colour.R * 255),
+					(byte)(colour.G * 255),
+					(byte)(colour.B * 255)
+				)
+			));
 		}
 
 		return colourStops.ToArray();
-	}
-
-	private static Color GetColour(Rgb value)
-	{
-		return Color.FromRgb(
-			(byte)(value.R * 255),
-			(byte)(value.G * 255),
-			(byte)(value.B * 255)
-		);
 	}
 }
