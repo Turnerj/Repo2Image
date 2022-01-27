@@ -90,7 +90,7 @@ namespace Repo2Image
 							ImageColourSampler.GetColourStops(vibrantColours)
 						);
 						x.Fill(colouredAreaGradient);
-						x.Fill(Color.FromRgba(0, 0, 0, (byte)(255 * 0.2)));
+						x.Fill(Color.FromRgba(0, 0, 0, (byte)(255 * 0.1)));
 					}
 					else
 					{
