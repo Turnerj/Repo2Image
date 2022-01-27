@@ -94,7 +94,17 @@ namespace Repo2Image
 					}
 					else
 					{
-						x.Fill(Color.ParseHex("#605858"));
+						var colouredAreaGradient = new LinearGradientBrush(
+							new PointF(0, 0),
+							new PointF(image.Width, 0),
+							GradientRepetitionMode.None,
+							new ColorStop[]
+							{
+								new(0f, Color.ParseHex("#605858")),
+								new(1f, Color.ParseHex("#8C8181"))
+							}
+						);
+						x.Fill(colouredAreaGradient);
 					}
 
 					x.DrawText(
