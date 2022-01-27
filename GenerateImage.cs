@@ -141,6 +141,13 @@ namespace Repo2Image
 					CompressionLevel = PngCompressionLevel.BestCompression
 				});
 				stream.Seek(0, SeekOrigin.Begin);
+
+				var headers = req.HttpContext.Response.GetTypedHeaders();
+				headers.CacheControl = new CacheControlHeaderValue()
+				{
+					MaxAge = TimeSpan.FromDays(1),
+					MustRevalidate = true
+				};
 				return new FileStreamResult(stream, "image/png")
 				{
 					EntityTag = new EntityTagHeaderValue(new StringSegment($"\"{owner}-{repoName}-{repo.StargazersCount}-{repo.ForksCount}\"")),
