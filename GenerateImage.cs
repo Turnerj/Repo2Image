@@ -148,6 +148,7 @@ namespace Repo2Image
 					MaxAge = TimeSpan.FromDays(1),
 					MustRevalidate = true
 				};
+				headers.Expires = DateTimeOffset.UtcNow.AddDays(1);
 				return new FileStreamResult(stream, "image/png")
 				{
 					EntityTag = new EntityTagHeaderValue(new StringSegment($"\"{owner}-{repoName}-{repo.StargazersCount}-{repo.ForksCount}\"")),
