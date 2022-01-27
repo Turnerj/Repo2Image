@@ -81,7 +81,7 @@ namespace Repo2Image
 				using var image = new Image<Rgba32>(420, 80);
 				image.Mutate(x =>
 				{
-					if (vibrantColours is not null)
+					if (vibrantColours is not null && vibrantColours.Length > 0)
 					{
 						var colouredAreaGradient = new LinearGradientBrush(
 							new PointF(0, 0),
