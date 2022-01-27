@@ -15,13 +15,20 @@ internal static class ImageColourSampler
 {
 	private static readonly Palette Palette = new(new PaletteOptions(new SwatchDefinition[]
 	{
+		SwatchDefinition.DarkVibrant,
 		SwatchDefinition.Vibrant
 	}));
 
 	public static Rgb[] GetVibrantColours(this Image<Rgb24> image)
 	{
 		var swatches = Palette.GetSwatches(image);
-		return swatches[0].GetColors()
+		var swatch = swatches[1];
+		if (swatch.Count == 0)
+		{
+			swatch = swatches[0];
+		}
+
+		return swatch.GetColors()
 			.Where(c => c.Hsv.S > 0.6f)
 			.OrderBy(c => c.Hsv.H)
 			.Select(c => c.Rgb)
