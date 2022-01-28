@@ -162,14 +162,14 @@ namespace Repo2Image
 				var headers = req.HttpContext.Response.GetTypedHeaders();
 				headers.CacheControl = new CacheControlHeaderValue()
 				{
-					MaxAge = TimeSpan.FromDays(1),
+					MaxAge = TimeSpan.FromHours(6),
 					MustRevalidate = true
 				};
-				headers.Expires = DateTimeOffset.UtcNow.AddDays(1);
+				headers.Expires = DateTimeOffset.UtcNow.AddHours(6);
 				return new FileStreamResult(stream, "image/png")
 				{
 					EntityTag = new EntityTagHeaderValue(new StringSegment($"\"{owner}-{repoName}-{repo.StargazersCount}-{repo.ForksCount}\"")),
-					LastModified = DateTime.UtcNow.Date
+					LastModified = DateTime.UtcNow
 				};
 			}
 			catch (Exception ex)
