@@ -63,28 +63,20 @@ namespace Repo2Image
 				{
 					Credentials = new Credentials(Environment.GetEnvironmentVariable("GitHubToken"))
 				};
-				var repo = await github.Repository.Get(owner, repoName);
 
-				Image<Rgb24> iconImage = null;
-				Rgb[] vibrantColours = null;
-				try
-				{
-					using var imageStream = await HttpClient.GetStreamAsync($"https://github.com/{repo.Owner.Login}/{repo.Name}/raw/main/images/icon.png");
-					iconImage = await Image.LoadAsync<Rgb24>(imageStream);
-					if (iconImage.Width <= MaxIconWidth && iconImage.Height <= MaxIconHeight)
-					{
-						vibrantColours = iconImage.GetVibrantColours();
-					}
-				}
-				catch (Exception ex)
-				{
-					log.LogInformation(ex, "Repository icon unavailable");
-				}
+				var repoTask = github.Repository.Get(owner, repoName);
+				var vibrantColoursTask = GetVibrantColoursAsync(log, owner, repoName);
 
+				await Task.WhenAll(repoTask, vibrantColoursTask);
+
+				var repo = await repoTask;
+				var vibrantColours = await vibrantColoursTask;
+
+				//Generate image
 				using var image = new Image<Rgba32>(420, 80);
 				image.Mutate(x =>
 				{
-					if (vibrantColours is not null && vibrantColours.Length > 0)
+					if (vibrantColours.Length > 0)
 					{
 						var colouredAreaGradient = new LinearGradientBrush(
 							new PointF(0, 0),
@@ -153,6 +145,7 @@ namespace Repo2Image
 					);
 				});
 
+				//Output image
 				var response = req.HttpContext.Response;
 				response.ContentType = "image/png";
 
@@ -180,6 +173,25 @@ namespace Repo2Image
 				log.LogError(ex, "Unable to generate image");;
 				return new BadRequestObjectResult("Unable to generate image");
 			}
+		}
+
+		private async Task<Rgb[]> GetVibrantColoursAsync(ILogger log, string owner, string repoName)
+		{
+			try
+			{
+				using var imageStream = await HttpClient.GetStreamAsync($"https://raw.githubusercontent.com/{owner}/{repoName}/main/images/icon.png");
+				var iconImage = await Image.LoadAsync<Rgb24>(imageStream);
+				if (iconImage.Width <= MaxIconWidth && iconImage.Height <= MaxIconHeight)
+				{
+					return iconImage.GetVibrantColours();
+				}
+			}
+			catch (Exception ex)
+			{
+				log.LogInformation(ex, "Repository icon unavailable");
+			}
+
+			return Array.Empty<Rgb>();
 		}
 
 		private static string GetNumberString(int number)
