@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -18,8 +17,6 @@ using Microsoft.Net.Http.Headers;
 using Microsoft.Extensions.Primitives;
 using System.Net.Http;
 using SixLabors.ImageSharp.ColorSpaces;
-using TurnerSoftware.Vibrancy;
-using System.Linq;
 
 namespace Repo2Image
 {
@@ -33,7 +30,25 @@ namespace Repo2Image
 		{
 			HttpClient = httpClient;
 		}
-		//TODO: Look at using Vibrancy
+
+		private static readonly Image StarImage;
+		private static readonly Image ForkImage;
+		private static readonly FontFamily FontFamily;
+
+		static GenerateImage()
+		{
+			var assembly = Assembly.GetExecutingAssembly();
+
+			var fontCollection = new FontCollection();
+			using var fontStream = assembly.GetManifestResourceStream("Repo2Image.fonts.PatuaOne-Regular.ttf");
+			FontFamily = fontCollection.Install(fontStream);
+
+			using var starStream = assembly.GetManifestResourceStream("Repo2Image.images.star-solid.png");
+			StarImage = Image.Load<Rgba32>(starStream);
+			using var forkStream = assembly.GetManifestResourceStream("Repo2Image.images.code-branch-solid.png");
+			ForkImage = Image.Load<Rgba32>(forkStream);
+		}
+
 		[FunctionName("GenerateImage")]
 		public async Task<IActionResult> Run(
 			[HttpTrigger(AuthorizationLevel.Anonymous, Route = "{owner}/{repoName}/image.png")] HttpRequest req,
@@ -49,18 +64,6 @@ namespace Repo2Image
 					Credentials = new Credentials(Environment.GetEnvironmentVariable("GitHubToken"))
 				};
 				var repo = await github.Repository.Get(owner, repoName);
-
-				var fontCollection = new FontCollection();
-				using var fontStream = Assembly.GetExecutingAssembly()
-					.GetManifestResourceStream("Repo2Image.fonts.PatuaOne-Regular.ttf");
-				var fontFamily = fontCollection.Install(fontStream);
-
-				using var starStream = Assembly.GetExecutingAssembly()
-					.GetManifestResourceStream("Repo2Image.images.star-solid.png");
-				using var starImage = await Image.LoadAsync<Rgba32>(starStream);
-				using var forkStream = Assembly.GetExecutingAssembly()
-					.GetManifestResourceStream("Repo2Image.images.code-branch-solid.png");
-				using var forkImage = await Image.LoadAsync<Rgba32>(forkStream);
 
 				Image<Rgb24> iconImage = null;
 				Rgb[] vibrantColours = null;
@@ -109,18 +112,18 @@ namespace Repo2Image
 
 					x.DrawText(
 						$"{repo.Owner.Login}'s",
-						fontFamily.CreateFont(20f),
+						FontFamily.CreateFont(20f),
 						Color.FromRgba(0, 0, 0, (byte)(255*0.6)),
 						new PointF(15f, 15f)
 					);
 					x.DrawText(
 						repo.Name,
-						fontFamily.CreateFont(24f),
+						FontFamily.CreateFont(24f),
 						Color.White,
 						new PointF(15f, 40f)
 					);
 
-					x.DrawImage(starImage, Point.Subtract(new Point(340, 17), new Size(starImage.Width / 2, 0)), 0.7f);
+					x.DrawImage(StarImage, Point.Subtract(new Point(340, 17), new Size(StarImage.Width / 2, 0)), 0.7f);
 					x.DrawText(
 						new DrawingOptions
 						{
@@ -130,11 +133,11 @@ namespace Repo2Image
 							}
 						},
 						GetNumberString(repo.StargazersCount),
-						fontFamily.CreateFont(16f),
+						FontFamily.CreateFont(16f),
 						Color.White,
 						new PointF(340f, 47f)
 					);
-					x.DrawImage(forkImage, Point.Subtract(new Point(390, 17), new Size(forkImage.Width / 2, 0)), 0.7f);
+					x.DrawImage(ForkImage, Point.Subtract(new Point(390, 17), new Size(ForkImage.Width / 2, 0)), 0.7f);
 					x.DrawText(
 						new DrawingOptions
 						{
@@ -144,33 +147,33 @@ namespace Repo2Image
 							}
 						},
 						GetNumberString(repo.ForksCount),
-						fontFamily.CreateFont(16f),
+						FontFamily.CreateFont(16f),
 						Color.White,
 						new PointF(390f, 47f)
 					);
 				});
 
-				var stream = new MemoryStream();
-				await image.SaveAsync(stream, new PngEncoder
-				{
-					ColorType = PngColorType.Palette,
-					BitDepth = PngBitDepth.Bit8,
-					CompressionLevel = PngCompressionLevel.BestCompression
-				});
-				stream.Seek(0, SeekOrigin.Begin);
+				var response = req.HttpContext.Response;
+				response.ContentType = "image/png";
 
-				var headers = req.HttpContext.Response.GetTypedHeaders();
+				var headers = response.GetTypedHeaders();
 				headers.CacheControl = new CacheControlHeaderValue()
 				{
 					MaxAge = TimeSpan.FromHours(6),
 					MustRevalidate = true
 				};
 				headers.Expires = DateTimeOffset.UtcNow.AddHours(6);
-				return new FileStreamResult(stream, "image/png")
+				headers.ETag = new EntityTagHeaderValue(new StringSegment($"\"{owner}-{repoName}-{repo.StargazersCount}-{repo.ForksCount}\""));
+				headers.LastModified = DateTime.UtcNow;
+
+				await image.SaveAsync(response.Body, new PngEncoder
 				{
-					EntityTag = new EntityTagHeaderValue(new StringSegment($"\"{owner}-{repoName}-{repo.StargazersCount}-{repo.ForksCount}\"")),
-					LastModified = DateTime.UtcNow
-				};
+					ColorType = PngColorType.Palette,
+					BitDepth = PngBitDepth.Bit8,
+					CompressionLevel = PngCompressionLevel.BestCompression
+				});
+
+				return new EmptyResult();
 			}
 			catch (Exception ex)
 			{
