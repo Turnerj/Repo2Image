@@ -17,6 +17,7 @@ using Microsoft.Net.Http.Headers;
 using Microsoft.Extensions.Primitives;
 using System.Net.Http;
 using SixLabors.ImageSharp.ColorSpaces;
+using SixLabors.ImageSharp.Drawing;
 
 namespace Repo2Image
 {
@@ -41,7 +42,7 @@ namespace Repo2Image
 
 			var fontCollection = new FontCollection();
 			using var fontStream = assembly.GetManifestResourceStream("Repo2Image.fonts.PatuaOne-Regular.ttf");
-			FontFamily = fontCollection.Install(fontStream);
+			FontFamily = fontCollection.Add(fontStream);
 
 			using var starStream = assembly.GetManifestResourceStream("Repo2Image.images.star-solid.png");
 			StarImage = Image.Load<Rgba32>(starStream);
@@ -116,32 +117,26 @@ namespace Repo2Image
 					);
 
 					x.DrawImage(StarImage, Point.Subtract(new Point(340, 17), new Size(StarImage.Width / 2, 0)), 0.7f);
-					x.DrawText(
-						new DrawingOptions
+					DrawText(
+						x,
+						new TextOptions(FontFamily.CreateFont(16f))
 						{
-							TextOptions = new TextOptions
-							{
-								HorizontalAlignment = HorizontalAlignment.Center
-							}
+							HorizontalAlignment = HorizontalAlignment.Center,
+							Origin = new PointF(340, 47)
 						},
 						GetNumberString(repo.StargazersCount),
-						FontFamily.CreateFont(16f),
-						Color.White,
-						new PointF(340f, 47f)
+						Color.White
 					);
 					x.DrawImage(ForkImage, Point.Subtract(new Point(390, 17), new Size(ForkImage.Width / 2, 0)), 0.7f);
-					x.DrawText(
-						new DrawingOptions
+					DrawText(
+						x,
+						new TextOptions(FontFamily.CreateFont(16f))
 						{
-							TextOptions = new TextOptions
-							{
-								HorizontalAlignment = HorizontalAlignment.Center
-							}
+							HorizontalAlignment = HorizontalAlignment.Center,
+							Origin = new PointF(390f, 47)
 						},
 						GetNumberString(repo.ForksCount),
-						FontFamily.CreateFont(16f),
-						Color.White,
-						new PointF(390f, 47f)
+						Color.White
 					);
 				});
 
@@ -204,6 +199,15 @@ namespace Repo2Image
 			{
 				return (number / 1000d).ToString("0.0k");
 			}
+		}
+
+		private static void DrawText(IImageProcessingContext source, TextOptions textOptions, string text, Color color)
+		{
+			var textPath = TextBuilder.GenerateGlyphs(
+				text,
+				textOptions
+			);
+			source.Fill(color, textPath);
 		}
 	}
 }

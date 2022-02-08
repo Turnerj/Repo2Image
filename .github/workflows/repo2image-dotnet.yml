@@ -18,6 +18,8 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+    - name: Additional NuGet Sources
+      run: dotnet nuget add source https://www.myget.org/F/sixlabors/api/v3/index.json -n SixLabors
     - name: Restore
       run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
     - name: Build
