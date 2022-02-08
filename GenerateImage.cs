@@ -117,8 +117,7 @@ namespace Repo2Image
 					);
 
 					x.DrawImage(StarImage, Point.Subtract(new Point(340, 17), new Size(StarImage.Width / 2, 0)), 0.7f);
-					DrawText(
-						x,
+					x.DrawText(
 						new TextOptions(FontFamily.CreateFont(16f))
 						{
 							HorizontalAlignment = HorizontalAlignment.Center,
@@ -128,8 +127,7 @@ namespace Repo2Image
 						Color.White
 					);
 					x.DrawImage(ForkImage, Point.Subtract(new Point(390, 17), new Size(ForkImage.Width / 2, 0)), 0.7f);
-					DrawText(
-						x,
+					x.DrawText(
 						new TextOptions(FontFamily.CreateFont(16f))
 						{
 							HorizontalAlignment = HorizontalAlignment.Center,
@@ -199,15 +197,6 @@ namespace Repo2Image
 			{
 				return (number / 1000d).ToString("0.0k");
 			}
-		}
-
-		private static void DrawText(IImageProcessingContext source, TextOptions textOptions, string text, Color color)
-		{
-			var textPath = TextBuilder.GenerateGlyphs(
-				text,
-				textOptions
-			);
-			source.Fill(color, textPath);
 		}
 	}
 }
