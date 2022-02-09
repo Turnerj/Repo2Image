@@ -10,6 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{7866289A-6DDD-4F75-B8D0-88F7AB3958F1}"
 	ProjectSection(SolutionItems) = preProject
 		.gitignore = .gitignore
+		License.txt = License.txt
 	EndProjectSection
 EndProject
 Global
