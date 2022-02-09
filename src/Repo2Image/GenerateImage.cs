@@ -6,6 +6,7 @@ using Octokit;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.ColorSpaces;
+using SixLabors.ImageSharp.ColorSpaces.Conversion;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
@@ -19,11 +20,7 @@ internal class GenerateImage : ParallelModule
 {
 	private const int Width = 420;
 	private const int Height = 80;
-	private static readonly ColorStop[] DefaultBackground = new ColorStop[]
-	{
-		new(0f, Color.ParseHex("#605858")),
-		new(1f, Color.ParseHex("#8C8181"))
-	};
+	private static readonly ColorSpaceConverter ColorSpaceConverter = new();
 
 	private static readonly Palette Palette = new(new PaletteOptions(new SwatchDefinition[]
 	{
@@ -49,7 +46,7 @@ internal class GenerateImage : ParallelModule
 		HttpClient = new HttpClient();
 		GitHub = new GitHubClient(new ProductHeaderValue("Repo2Image"))
 		{
-			Credentials = new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
+			//Credentials = new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
 		};
 
 		var fontCollection = new FontCollection();
@@ -97,7 +94,7 @@ internal class GenerateImage : ParallelModule
 			}
 			else
 			{
-				DrawGradientBackground(x, DefaultBackground);
+				DrawGradientBackground(x, GetDefaultBackground());
 			}
 
 			x.DrawText(
@@ -164,6 +161,19 @@ internal class GenerateImage : ParallelModule
 			context.LogWarning(document, ex.Message);
 			return Array.Empty<Rgb>();
 		}
+	}
+
+	private static ColorStop[] GetDefaultBackground()
+	{
+		var hsvA = new Hsv(Random.Shared.Next(360), .08f, .28f);
+		var hsvB = new Hsv(Random.Shared.Next(360), .08f, .4f);
+		var colourA = (Rgb24)ColorSpaceConverter.ToRgb(hsvA);
+		var colourB = (Rgb24)ColorSpaceConverter.ToRgb(hsvB);
+		return new ColorStop[]
+		{
+			new(0f, colourA),
+			new(1f, colourB)
+		};
 	}
 
 	private static ColorStop[] GetColourStops(Rgb[] colours)
