@@ -1,0 +1,6 @@
+﻿{
+  "Packages": [
+    "MongoFramework",
+    "MongoFramework.Profiling.MiniProfiler"
+  ]
+}

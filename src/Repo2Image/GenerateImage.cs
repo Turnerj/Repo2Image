@@ -1,0 +1,202 @@
+﻿using Microsoft.Extensions.Logging;
+using Octokit;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.ColorSpaces;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using Statiq.Common;
+using TurnerSoftware.Vibrancy;
+
+namespace Repo2Image;
+
+internal class GenerateImage : ParallelModule
+{
+	private const int Width = 420;
+	private const int Height = 80;
+	private static readonly ColorStop[] DefaultBackground = new ColorStop[]
+	{
+		new(0f, Color.ParseHex("#605858")),
+		new(1f, Color.ParseHex("#8C8181"))
+	};
+
+	private static readonly Palette Palette = new(new PaletteOptions(new SwatchDefinition[]
+	{
+		SwatchDefinition.DarkVibrant with
+		{
+			MinSaturation = 0.6f
+		},
+		SwatchDefinition.Vibrant with
+		{
+			MinSaturation = 0.6f
+		}
+	}));
+
+	private readonly HttpClient HttpClient;
+	private readonly GitHubClient GitHub;
+	private readonly Image StarImage;
+	private readonly Image ForkImage;
+	private readonly FontFamily FontFamily;
+
+	public GenerateImage()
+	{
+		HttpClient = new HttpClient();
+		GitHub = new GitHubClient(new ProductHeaderValue("Repo2Image"))
+		{
+			Credentials = new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
+		};
+
+		var fontCollection = new FontCollection();
+		FontFamily = fontCollection.Add("fonts/PatuaOne-Regular.ttf");
+
+		StarImage = Image.Load<Rgba32>("images/star-solid.png");
+		ForkImage = Image.Load<Rgba32>("images/code-branch-solid.png");
+	}
+
+	protected override async Task<IEnumerable<IDocument>> ExecuteInputAsync(IDocument input, IExecutionContext context) => new[]
+	{
+		await CreateImageAsync(input, context)
+	};
+
+	private async ValueTask<IDocument> CreateImageAsync(IDocument input, IExecutionContext context)
+	{
+		var owner = input.Source.Parent.Name;
+		var repoName = input.Source.FileNameWithoutExtension.Name;
+
+		var repoTask = GitHub.Repository.Get(owner, repoName);
+		var vibrantColoursTask = GetBackgroundColoursAsync(owner, repoName, input, context);
+
+		//Get repository details and background colours at the same time
+		await Task.WhenAll(repoTask, vibrantColoursTask);
+		var repo = await repoTask;
+		var vibrantColours = await vibrantColoursTask;
+
+		//Generate image
+		using var image = new Image<Rgba32>(Width, Height);
+		image.Mutate(x =>
+		{
+			if (vibrantColours.Length > 0)
+			{
+				DrawGradientBackground(x, GetColourStops(vibrantColours));
+				x.Fill(Color.FromRgba(0, 0, 0, (byte)(255 * 0.1)));
+			}
+			else
+			{
+				DrawGradientBackground(x, DefaultBackground);
+			}
+
+			x.DrawText(
+				$"{repo.Owner.Login}'s",
+				FontFamily.CreateFont(20f),
+				Color.FromRgba(0, 0, 0, (byte)(255 * 0.6)),
+				new PointF(15f, 15f)
+			);
+			x.DrawText(
+				repo.Name,
+				FontFamily.CreateFont(24f),
+				Color.White,
+				new PointF(15f, 40f)
+			);
+
+			DrawMetric(x, StarImage, 340, repo.StargazersCount);
+			DrawMetric(x, ForkImage, 390, repo.ForksCount);
+		});
+
+		var output = new MemoryStream();
+		await image.SaveAsync(output, new PngEncoder
+		{
+			ColorType = PngColorType.Palette,
+			BitDepth = PngBitDepth.Bit8,
+			CompressionLevel = PngCompressionLevel.BestCompression
+		});
+		return context.CreateDocument(
+			input.Source,
+			$"{repo.Owner.Login}/{repo.Name}.png",
+			context.GetContentProvider(output)
+		);
+	}
+	private async Task<Rgb[]> GetBackgroundColoursAsync(string owner, string repoName, IDocument document, IExecutionContext context)
+	{
+		try
+		{
+			var imageUrl = document.GetString("ImageUrl", $"https://raw.githubusercontent.com/{owner}/{repoName}/main/images/icon.png");
+			using var imageStream = await HttpClient.GetStreamAsync(imageUrl);
+			var iconImage = await Image.LoadAsync<Rgb24>(imageStream);
+			
+			var swatches = Palette.GetSwatches(iconImage);
+			var swatch = swatches[1];
+			if (swatch.Count == 0)
+			{
+				swatch = swatches[0];
+			}
+
+			return swatch.GetColors()
+				.OrderBy(c => c.Hsv.H)
+				.Select(c => c.Rgb)
+				.ToArray();
+		}
+		catch (Exception ex)
+		{
+			context.LogWarning(document, ex.Message);
+			return Array.Empty<Rgb>();
+		}
+	}
+
+	private static ColorStop[] GetColourStops(Rgb[] colours)
+	{
+		var colourStops = new ColorStop[colours.Length];
+		var stopDistance = 1f / (colours.Length - 1);
+		for (var i = 0; i < colours.Length; i++)
+		{
+			var colour = colours[i];
+			colourStops[i] = new ColorStop(
+				stopDistance * i,
+				Color.FromRgb(
+					(byte)(colour.R * 255),
+					(byte)(colour.G * 255),
+					(byte)(colour.B * 255)
+				)
+			);
+		}
+		return colourStops;
+	}
+
+	private static void DrawGradientBackground(IImageProcessingContext imageProcessingContext, ColorStop[] colorStops)
+	{
+		var gradient = new LinearGradientBrush(
+			new PointF(0, 0),
+			new PointF(Width, 0),
+			GradientRepetitionMode.None,
+			colorStops
+		);
+		imageProcessingContext.Fill(gradient);
+	}
+
+	private void DrawMetric(IImageProcessingContext imageProcessingContext, Image icon, int x, int value)
+	{
+		imageProcessingContext.DrawImage(icon, Point.Subtract(new Point(x, 17), new Size(icon.Width / 2, 0)), 0.7f);
+		imageProcessingContext.DrawText(
+			new TextOptions(FontFamily.CreateFont(16f))
+			{
+				HorizontalAlignment = HorizontalAlignment.Center,
+				Origin = new PointF(x, 47)
+			},
+			FormatNumber(value),
+			Color.White
+		);
+	}
+
+	private static string FormatNumber(int number)
+	{
+		if (number < 1000)
+		{
+			return number.ToString();
+		}
+		else
+		{
+			return (number / 1000d).ToString("0.0k");
+		}
+	}
+}

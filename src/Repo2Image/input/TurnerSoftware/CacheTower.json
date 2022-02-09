@@ -1,0 +1,10 @@
+﻿{
+  "Packages": [
+    "CacheTower",
+    "CacheTower.Providers.Redis",
+    "CacheTower.Providers.FileSystem.Json",
+    "CacheTower.Providers.FileSystem.Protobuf",
+    "CacheTower.Providers.Database.MongoDB",
+    "CacheTower.Extensions.Redis"
+  ]
+}

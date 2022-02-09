@@ -1,0 +1,6 @@
+﻿{
+  "Packages": [
+    "TurnerSoftware.BuildVersioning",
+    "TurnerSoftware.BuildVersioning.Tool"
+  ]
+}
