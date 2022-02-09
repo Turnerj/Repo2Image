@@ -1,5 +1,6 @@
 ﻿using Repo2Image;
 using Statiq.App;
+using Statiq.Core;
 
 await Bootstrapper
 	.Factory
@@ -7,7 +8,7 @@ await Bootstrapper
 	.BuildPipeline("Repo2Image", builder =>
 	{
 		builder.WithInputReadFiles("*/*.json")
-			.WithProcessModules(new GenerateImage())
+			.WithProcessModules(new ParseJson(), new GenerateImage())
 			.WithOutputWriteFiles();
 	})
 	.BuildPipeline("Configuration", builder =>
