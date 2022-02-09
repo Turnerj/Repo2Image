@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.31903.286
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repo2Image", "Repo2Image.csproj", "{8C1CCB4C-1C72-4F21-BF2A-BFA53DF8B4FA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repo2Image", "Repo2ImageAF/Repo2Image.csproj", "{8C1CCB4C-1C72-4F21-BF2A-BFA53DF8B4FA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
