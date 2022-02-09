@@ -46,7 +46,7 @@ internal class GenerateImage : ParallelModule
 		HttpClient = new HttpClient();
 		GitHub = new GitHubClient(new ProductHeaderValue("Repo2Image"))
 		{
-			//Credentials = new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
+			Credentials = new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
 		};
 
 		var fontCollection = new FontCollection();
@@ -165,8 +165,8 @@ internal class GenerateImage : ParallelModule
 
 	private static ColorStop[] GetDefaultBackground()
 	{
-		var hsvA = new Hsv(Random.Shared.Next(360), .08f, .28f);
-		var hsvB = new Hsv(Random.Shared.Next(360), .08f, .4f);
+		var hsvA = new Hsv(Random.Shared.Next(360), .11f, .37f);
+		var hsvB = new Hsv(Random.Shared.Next(360), .1f, .54f);
 		var colourA = (Rgb24)ColorSpaceConverter.ToRgb(hsvA);
 		var colourB = (Rgb24)ColorSpaceConverter.ToRgb(hsvB);
 		return new ColorStop[]
