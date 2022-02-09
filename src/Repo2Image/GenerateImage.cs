@@ -165,8 +165,9 @@ internal class GenerateImage : ParallelModule
 
 	private static ColorStop[] GetDefaultBackground()
 	{
-		var hsvA = new Hsv(Random.Shared.Next(360), .11f, .37f);
-		var hsvB = new Hsv(Random.Shared.Next(360), .1f, .54f);
+		var hue = Random.Shared.Next(360);
+		var hsvA = new Hsv(hue, .16f, .37f);
+		var hsvB = new Hsv(hue, .16f, .54f);
 		var colourA = (Rgb24)ColorSpaceConverter.ToRgb(hsvA);
 		var colourB = (Rgb24)ColorSpaceConverter.ToRgb(hsvB);
 		return new ColorStop[]
