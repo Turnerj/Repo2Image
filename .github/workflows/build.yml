@@ -3,6 +3,8 @@ on:
   push:
     branches:
     - main
+  schedule:
+  - cron: '0 * * * *' # Every hour
 
 jobs:
   build-and-deploy:
@@ -24,7 +26,7 @@ jobs:
     - name: Publish
       uses: netlify/actions/cli@master
       with:
-        args: deploy --dir=src/Repo2Image/output
+        args: deploy --dir=src/Repo2Image/output --prod
       env:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
