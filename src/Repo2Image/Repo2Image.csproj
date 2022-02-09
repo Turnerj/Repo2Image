@@ -17,6 +17,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="NuGet.Protocol" Version="6.0.0" />
 		<PackageReference Include="Octokit" Version="0.50.0" />
 		<PackageReference Include="SixLabors.Fonts" Version="1.0.0-beta16" />
 		<PackageReference Include="SixLabors.ImageSharp" Version="2.0.1-alpha.0.1" />

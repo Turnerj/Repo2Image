@@ -1,4 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
+using NuGet.Common;
+using NuGet.Protocol;
+using NuGet.Protocol.Core.Types;
 using Octokit;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
@@ -38,6 +41,7 @@ internal class GenerateImage : ParallelModule
 	private readonly GitHubClient GitHub;
 	private readonly Image StarImage;
 	private readonly Image ForkImage;
+	private readonly Image DownloadImage;
 	private readonly FontFamily FontFamily;
 
 	public GenerateImage()
@@ -53,6 +57,7 @@ internal class GenerateImage : ParallelModule
 
 		StarImage = Image.Load<Rgba32>("images/star-solid.png");
 		ForkImage = Image.Load<Rgba32>("images/code-branch-solid.png");
+		DownloadImage = Image.Load<Rgba32>("images/download-solid.png");
 	}
 
 	protected override async Task<IEnumerable<IDocument>> ExecuteInputAsync(IDocument input, IExecutionContext context) => new[]
@@ -64,14 +69,22 @@ internal class GenerateImage : ParallelModule
 	{
 		var owner = input.Source.Parent.Name;
 		var repoName = input.Source.FileNameWithoutExtension.Name;
+		var packages = input.GetList("Packages", Array.Empty<string>());
 
 		var repoTask = GitHub.Repository.Get(owner, repoName);
 		var vibrantColoursTask = GetBackgroundColoursAsync(owner, repoName, input, context);
+		var packageCountTask = new ValueTask<long>(0);
+
+		if (packages.Count > 0)
+		{
+			packageCountTask = GetDownloadCountAsync(packages);
+		}
 
 		//Get repository details and background colours at the same time
 		await Task.WhenAll(repoTask, vibrantColoursTask);
 		var repo = await repoTask;
 		var vibrantColours = await vibrantColoursTask;
+		var downloadCount = await packageCountTask;
 
 		//Generate image
 		using var image = new Image<Rgba32>(Width, Height);
@@ -101,7 +114,15 @@ internal class GenerateImage : ParallelModule
 			);
 
 			DrawMetric(x, StarImage, 340, repo.StargazersCount);
-			DrawMetric(x, ForkImage, 390, repo.ForksCount);
+
+			if (downloadCount > 0)
+			{
+				DrawMetric(x, DownloadImage, 390, downloadCount);
+			}
+			else
+			{
+				DrawMetric(x, ForkImage, 390, repo.ForksCount);
+			}
 		});
 
 		var output = new MemoryStream();
@@ -117,6 +138,7 @@ internal class GenerateImage : ParallelModule
 			context.GetContentProvider(output)
 		);
 	}
+
 	private async Task<Rgb[]> GetBackgroundColoursAsync(string owner, string repoName, IDocument document, IExecutionContext context)
 	{
 		try
@@ -124,7 +146,7 @@ internal class GenerateImage : ParallelModule
 			var imageUrl = document.GetString("ImageUrl", $"https://raw.githubusercontent.com/{owner}/{repoName}/main/images/icon.png");
 			using var imageStream = await HttpClient.GetStreamAsync(imageUrl);
 			var iconImage = await Image.LoadAsync<Rgb24>(imageStream);
-			
+
 			var swatches = Palette.GetSwatches(iconImage);
 			var swatch = swatches[1];
 			if (swatch.Count == 0)
@@ -174,7 +196,22 @@ internal class GenerateImage : ParallelModule
 		imageProcessingContext.Fill(gradient);
 	}
 
-	private void DrawMetric(IImageProcessingContext imageProcessingContext, Image icon, int x, int value)
+	private static async ValueTask<long> GetDownloadCountAsync(IReadOnlyList<string> packages)
+	{
+		var sourceRepository = NuGet.Protocol.Core.Types.Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
+		var packageSearchResource = sourceRepository.GetResource<PackageSearchResource>();
+		var packageResults = await packageSearchResource.SearchAsync(
+			string.Join(' ', packages.Select(p => $"packageid:{p}")),
+			new SearchFilter(includePrerelease: true),
+			skip: 0,
+			take: packages.Count,
+			log: NullLogger.Instance,
+			cancellationToken: CancellationToken.None
+		);
+		return packageResults.Sum(p => p.DownloadCount ?? 0);
+	}
+
+	private void DrawMetric(IImageProcessingContext imageProcessingContext, Image icon, int x, long value)
 	{
 		imageProcessingContext.DrawImage(icon, Point.Subtract(new Point(x, 17), new Size(icon.Width / 2, 0)), 0.7f);
 		imageProcessingContext.DrawText(
@@ -188,7 +225,7 @@ internal class GenerateImage : ParallelModule
 		);
 	}
 
-	private static string FormatNumber(int number)
+	private static string FormatNumber(long number)
 	{
 		if (number < 1000)
 		{
