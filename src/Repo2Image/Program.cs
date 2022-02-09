@@ -10,4 +10,9 @@ await Bootstrapper
 			.WithProcessModules(new GenerateImage())
 			.WithOutputWriteFiles();
 	})
+	.BuildPipeline("Configuration", builder =>
+	{
+		builder.WithInputReadFiles("_headers")
+			.WithOutputWriteFiles();
+	})
 	.RunAsync();
