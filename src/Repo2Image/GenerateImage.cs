@@ -111,15 +111,15 @@ internal class GenerateImage : ParallelModule
 				new PointF(15f, 40f)
 			);
 
-			DrawMetric(x, StarImage, 340, repo.StargazersCount);
+			DrawMetric(x, StarImage, 334, repo.StargazersCount);
 
 			if (downloadCount > 0)
 			{
-				DrawMetric(x, DownloadImage, 390, downloadCount);
+				DrawMetric(x, DownloadImage, 387, downloadCount);
 			}
 			else
 			{
-				DrawMetric(x, ForkImage, 390, repo.ForksCount);
+				DrawMetric(x, ForkImage, 387, repo.ForksCount);
 			}
 		});
 
