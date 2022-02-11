@@ -47,7 +47,7 @@ internal class GenerateImage : ParallelModule
 		HttpClient = new HttpClient();
 		GitHub = new GitHubClient(new ProductHeaderValue("Repo2Image"))
 		{
-			Credentials = new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
+			//Credentials = new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
 		};
 
 		var fontCollection = new FontCollection();
@@ -65,33 +65,15 @@ internal class GenerateImage : ParallelModule
 
 	private async ValueTask<IDocument> CreateImageAsync(IDocument input, IExecutionContext context)
 	{
-		var owner = input.Source.Parent.Name;
-		var repoName = input.Source.FileNameWithoutExtension.Name;
-		var packages = input.GetList("Packages", Array.Empty<string>());
-
-		var repoTask = GitHub.Repository.Get(owner, repoName);
-		var vibrantColoursTask = GetBackgroundColoursAsync(owner, repoName, input, context);
-		var packageCountTask = new ValueTask<long>(0);
-
-		if (packages.Count > 0)
-		{
-			packageCountTask = GetDownloadCountAsync(packages);
-		}
-
-		//Get repository details and background colours at the same time
-		await Task.WhenAll(repoTask, vibrantColoursTask);
-		var repo = await repoTask;
-		var vibrantColours = await vibrantColoursTask;
-		var downloadCount = await packageCountTask;
+		var projectDetails = await GetProjectDetailsAsync(input, context);
 
 		//Generate image
 		using var image = new Image<Rgba32>(Width, Height);
 		image.Mutate(x =>
 		{
-			if (vibrantColours.Length > 0)
+			if (projectDetails.VibrantColours.Length > 0)
 			{
-				DrawGradientBackground(x, GetColourStops(vibrantColours));
-				x.Fill(Color.FromRgba(0, 0, 0, (byte)(255 * 0.1)));
+				DrawGradientBackground(x, GetColourStops(projectDetails.VibrantColours));
 			}
 			else
 			{
@@ -99,27 +81,30 @@ internal class GenerateImage : ParallelModule
 			}
 
 			x.DrawText(
-				$"{repo.Owner.Login}'s",
+				$"{projectDetails.Owner}'s",
 				FontFamily.CreateFont(20f),
 				Color.FromRgba(0, 0, 0, (byte)(255 * 0.6)),
 				new PointF(15f, 15f)
 			);
-			x.DrawText(
-				repo.Name,
+			DrawTextWithShadow(
+				x,
+				projectDetails.RepositoryName,
 				FontFamily.CreateFont(24f),
 				Color.White,
-				new PointF(15f, 40f)
+				new Point(15, 40),
+				Color.FromRgba(0, 0, 0, 117),
+				new Point(1, 1)
 			);
 
-			DrawMetric(x, StarImage, 334, repo.StargazersCount);
+			DrawMetric(x, StarImage, 334, projectDetails.NumberOfStargazers);
 
-			if (downloadCount > 0)
+			if (projectDetails.NumberOfDownloads > 0)
 			{
-				DrawMetric(x, DownloadImage, 387, downloadCount);
+				DrawMetric(x, DownloadImage, 387, projectDetails.NumberOfDownloads);
 			}
 			else
 			{
-				DrawMetric(x, ForkImage, 387, repo.ForksCount);
+				DrawMetric(x, ForkImage, 387, projectDetails.NumberOfForks);
 			}
 		});
 
@@ -132,9 +117,41 @@ internal class GenerateImage : ParallelModule
 		});
 		return context.CreateDocument(
 			input.Source,
-			$"{repo.Owner.Login}/{repo.Name}.png",
+			$"{projectDetails.Owner}/{projectDetails.RepositoryName}.png",
 			context.GetContentProvider(output)
 		);
+	}
+	private async Task<ProjectDetails> GetProjectDetailsAsync(IDocument input, IExecutionContext context)
+	{
+		var owner = input.Source.Parent.Name;
+		var repoName = input.Source.FileNameWithoutExtension.Name;
+		var packages = input.GetList("Packages", Array.Empty<string>());
+
+		var repoTask = GitHub.Repository.Get(owner, repoName);
+		var vibrantColoursTask = GetBackgroundColoursAsync(owner, repoName, input, context);
+		var downloadCountTask = Task.FromResult(0L);
+
+		if (packages.Count > 0)
+		{
+			downloadCountTask = GetDownloadCountAsync(packages);
+		}
+		
+		//Get repository details, background colours and download counts at the same time
+		await Task.WhenAll(repoTask, vibrantColoursTask, downloadCountTask);
+		var repo = await repoTask;
+		var vibrantColours = await vibrantColoursTask;
+		var downloadCount = await downloadCountTask;
+
+		var result = new ProjectDetails
+		{
+			Owner = repo.Owner.Login,
+			RepositoryName = repo.Name,
+			NumberOfForks = repo.ForksCount,
+			NumberOfStargazers = repo.StargazersCount,
+			NumberOfDownloads = downloadCount,
+			VibrantColours = vibrantColours
+		};
+		return result;
 	}
 
 	private async Task<Rgb[]> GetBackgroundColoursAsync(string owner, string repoName, IDocument document, IExecutionContext context)
@@ -221,7 +238,7 @@ internal class GenerateImage : ParallelModule
 		imageProcessingContext.Fill(gradient);
 	}
 
-	private static async ValueTask<long> GetDownloadCountAsync(IReadOnlyList<string> packages)
+	private static async Task<long> GetDownloadCountAsync(IReadOnlyList<string> packages)
 	{
 		var sourceRepository = NuGet.Protocol.Core.Types.Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
 		var packageSearchResource = sourceRepository.GetResource<PackageSearchResource>();
@@ -236,29 +253,51 @@ internal class GenerateImage : ParallelModule
 		return packageResults.Sum(p => p.DownloadCount ?? 0);
 	}
 
+	private static void DrawTextWithShadow(IImageProcessingContext imageProcessingContext, string text, Font font, Color color, Point location, Color shadow, Point offset)
+		=> DrawTextWithShadow(imageProcessingContext, text, new TextOptions(font) { Origin = location }, color, shadow, offset);
+
+	private static void DrawTextWithShadow(IImageProcessingContext imageProcessingContext, string text, TextOptions textOptions, Color color, Color shadow, Point offset)
+	{
+		//Shadow
+		textOptions.Origin += offset;
+		imageProcessingContext.DrawText(
+			textOptions,
+			text,
+			shadow
+		);
+		//Original
+		textOptions.Origin -= offset;
+		imageProcessingContext.DrawText(
+			textOptions,
+			text,
+			color
+		);
+	}
+
 	private void DrawMetric(IImageProcessingContext imageProcessingContext, Image icon, int x, long value)
 	{
 		imageProcessingContext.DrawImage(icon, Point.Subtract(new Point(x, 17), new Size(icon.Width / 2, 0)), 0.6f);
-		imageProcessingContext.DrawText(
+		DrawTextWithShadow(
+			imageProcessingContext,
+			FormatNumber(value),
 			new TextOptions(FontFamily.CreateFont(16f))
 			{
 				HorizontalAlignment = HorizontalAlignment.Center,
-				Origin = new PointF(x, 47)
+				Origin = new Point(x, 47)
 			},
-			FormatNumber(value),
-			Color.White
+			Color.White,
+			Color.FromRgba(0, 0, 0, 117),
+			new Point(1, 1)
 		);
 	}
 
 	private static string FormatNumber(long number)
 	{
-		if (number < 1000)
+		return number switch
 		{
-			return number.ToString();
-		}
-		else
-		{
-			return (number / 1000d).ToString("0.0k");
-		}
+			>= 1_000_000 => (number / 1_000_000d).ToString("0.0m"),
+			>= 1_000 => (number / 1_000d).ToString("0.0k"),
+			_ => number.ToString()
+		};
 	}
 }
