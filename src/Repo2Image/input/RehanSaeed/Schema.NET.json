@@ -1,0 +1,7 @@
+﻿{
+  "Background": "#9A0100",
+  "Packages": [
+    "Schema.NET",
+    "Schema.NET.Pending"
+  ]
+}
