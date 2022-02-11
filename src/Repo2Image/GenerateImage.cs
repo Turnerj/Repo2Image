@@ -139,6 +139,14 @@ internal class GenerateImage : ParallelModule
 
 	private async Task<Rgb[]> GetBackgroundColoursAsync(string owner, string repoName, IDocument document, IExecutionContext context)
 	{
+		if (document.TryGetValue<string>("Background", out var background))
+		{
+			return new Rgb[]
+			{
+				Color.ParseHex(background).ToPixel<Rgb24>()
+			};
+		}
+
 		try
 		{
 			var imageUrl = document.GetString("ImageUrl", $"https://raw.githubusercontent.com/{owner}/{repoName}/main/images/icon.png");
@@ -181,7 +189,12 @@ internal class GenerateImage : ParallelModule
 	private static ColorStop[] GetColourStops(Rgb[] colours)
 	{
 		var colourStops = new ColorStop[colours.Length];
-		var stopDistance = 1f / (colours.Length - 1);
+		var stopDistance = 1f;
+		if (colours.Length > 1)
+		{
+			stopDistance /= (colours.Length - 1);
+		}
+
 		for (var i = 0; i < colours.Length; i++)
 		{
 			var colour = colours[i];
@@ -225,7 +238,7 @@ internal class GenerateImage : ParallelModule
 
 	private void DrawMetric(IImageProcessingContext imageProcessingContext, Image icon, int x, long value)
 	{
-		imageProcessingContext.DrawImage(icon, Point.Subtract(new Point(x, 17), new Size(icon.Width / 2, 0)), 0.7f);
+		imageProcessingContext.DrawImage(icon, Point.Subtract(new Point(x, 17), new Size(icon.Width / 2, 0)), 0.6f);
 		imageProcessingContext.DrawText(
 			new TextOptions(FontFamily.CreateFont(16f))
 			{
