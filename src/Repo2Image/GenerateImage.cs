@@ -83,7 +83,7 @@ internal class GenerateImage : ParallelModule
 			x.DrawText(
 				$"{projectDetails.Owner}'s",
 				FontFamily.CreateFont(20f),
-				Color.FromRgba(0, 0, 0, (byte)(255 * 0.6)),
+				Color.FromRgba(0, 0, 0, (byte)(255 * 0.7)),
 				new PointF(15f, 15f)
 			);
 			DrawTextWithShadow(
@@ -92,7 +92,7 @@ internal class GenerateImage : ParallelModule
 				FontFamily.CreateFont(24f),
 				Color.White,
 				new Point(15, 40),
-				Color.FromRgba(0, 0, 0, 117),
+				Color.FromRgba(0, 0, 0, 122),
 				new Point(1, 1)
 			);
 
@@ -276,7 +276,7 @@ internal class GenerateImage : ParallelModule
 
 	private void DrawMetric(IImageProcessingContext imageProcessingContext, Image icon, int x, long value)
 	{
-		imageProcessingContext.DrawImage(icon, Point.Subtract(new Point(x, 17), new Size(icon.Width / 2, 0)), 0.6f);
+		imageProcessingContext.DrawImage(icon, Point.Subtract(new Point(x, 17), new Size(icon.Width / 2, 0)), 0.7f);
 		DrawTextWithShadow(
 			imageProcessingContext,
 			FormatNumber(value),
@@ -286,7 +286,7 @@ internal class GenerateImage : ParallelModule
 				Origin = new Point(x, 47)
 			},
 			Color.White,
-			Color.FromRgba(0, 0, 0, 117),
+			Color.FromRgba(0, 0, 0, 122),
 			new Point(1, 1)
 		);
 	}
