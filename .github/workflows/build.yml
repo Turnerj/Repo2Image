@@ -21,7 +21,7 @@ jobs:
       run: dotnet restore
     - name: Build
       env: 
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GitHubToken: ${{ secrets.GITHUB_TOKEN }}
       run: dotnet build -c Release && dotnet run --project src/Repo2Image/Repo2Image.csproj -c Release
     - name: Publish
       uses: netlify/actions/cli@master

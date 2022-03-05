@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using NuGet.Common;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
@@ -42,12 +43,12 @@ internal class GenerateImage : ParallelModule
 	private readonly Image DownloadImage;
 	private readonly FontFamily FontFamily;
 
-	public GenerateImage()
+	public GenerateImage(IConfiguration configuration)
 	{
 		HttpClient = new HttpClient();
 		GitHub = new GitHubClient(new ProductHeaderValue("Repo2Image"))
 		{
-			//Credentials = new Credentials(Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
+			Credentials = new Credentials(configuration.GetValue<string>("GitHubToken"))
 		};
 
 		var fontCollection = new FontCollection();
