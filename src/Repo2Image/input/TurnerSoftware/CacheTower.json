@@ -5,6 +5,9 @@
     "CacheTower.Providers.FileSystem.Json",
     "CacheTower.Providers.FileSystem.Protobuf",
     "CacheTower.Providers.Database.MongoDB",
-    "CacheTower.Extensions.Redis"
+    "CacheTower.Extensions.Redis",
+    "CacheTower.Serializers.NewtonsoftJson",
+    "CacheTower.Serializers.SystemTextJson",
+    "CacheTower.Serializers.Protobuf"
   ]
 }
