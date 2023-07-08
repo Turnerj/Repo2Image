@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -19,7 +19,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
-		<PackageReference Include="NuGet.Protocol" Version="6.4.0" />
+		<PackageReference Include="NuGet.Protocol" Version="6.4.2" />
 		<PackageReference Include="Octokit" Version="5.0.0" />
 		<PackageReference Include="SixLabors.Fonts" Version="1.0.0-beta19" />
 		<PackageReference Include="SixLabors.ImageSharp" Version="2.1.3" />
